@@ -20,6 +20,12 @@ SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'callback'
 
+NUM_IN_PROGRESS = 2
+NUM_IN_LINE = 3
+INDEX_FILE_NAME = 'idx_file.dat'
+
+# assume sheet index starts at 2 due to column labels
+SHEET_IDX_START = 2
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -62,11 +68,31 @@ def main():
     result = service.spreadsheets().values().get(
         spreadsheetId=spreadsheetId, range=rangeName).execute()
     values = result.get('values', [])
+
+    # assume that the sheet starts at A2 due to column labels
+    sheet_idx = SHEET_IDX_START
+
+    # check to see if file is present
+    try: 
+        idx_file = open(INDEX_FILE_NAME, 'r')
+        sheet_idx = int(idx_file.readline())
+        idx_file.close()
+    except: 
+        idx_file = open(INDEX_FILE_NAME, 'w')
+        idx_file.close()
+
     if not values:
         print('No data found.')
     else:
         for row in values:
-            print(row)
+            if row: 
+                print(row)
+            else: 
+                pass
+
+    idx_file = open(INDEX_FILE_NAME, 'w')
+    idx_file.write(str(sheet_idx))
+    idx_file.close()
 
 
 if __name__ == '__main__':
