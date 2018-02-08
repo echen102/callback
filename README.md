@@ -8,10 +8,7 @@ This is a basic callback system. The finished product integrates with google spr
 * Python 3.x +
 
 ## Functions implemented
-
-## Functions to be implemented (please don't mind the notes)
 - [x] user can get next customer
-    Useful when there aren't enough people in line
 - [x] user can either print out current state : current
 - [x] user can send text to anyone in the queue : text INDEX
 - [x] user can set in progress to done : done INDEX
