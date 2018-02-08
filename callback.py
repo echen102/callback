@@ -24,7 +24,7 @@ APPLICATION_NAME = 'callback'
 
 NUM_SERVING = 2
 NUM_WAITING = 3
-NOSHOW_TIME_LIM = 300
+NOSHOW_TIME_LIM = 30
 INDEX_FILE_NAME = 'idx_file.dat'
 # sheet indicies
 NAME = 1
@@ -33,9 +33,6 @@ PHONE = 3
 EMAIL = 4
 
 SPREADSHEET_ID = '1i119SHQA2Om0ykgpIoP8V4GQOMZf-IrVAotu9yV4m3k'
-
-# assume sheet index starts at 1 due to column labels
-SHEET_IDX_START = 1
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -83,12 +80,15 @@ def get_values():
 
 # Prints out the current state and should always be max the capacity specified
 def print_state(state): 
-    print ("Current State:")
-    for idx, elem in enumerate(state): 
-        if idx < NUM_SERVING: 
-            print ("%d : [SERVING] %s %s" %(idx, elem[NAME], elem[PHONE])) 
-        else: 
-            print ("%d : [WAITING] %s %s" %(idx, elem[NAME], elem[PHONE]))
+    try: 
+        print ("Current State:")
+        for idx, elem in enumerate(state): 
+            if idx < NUM_SERVING: 
+                print ("%d : [SERVING] %s %s" %(idx, elem[NAME], elem[PHONE])) 
+            else: 
+                print ("%d : [WAITING] %s %s" %(idx, elem[NAME], elem[PHONE]))
+    except:
+        print ("No Data") 
 
 # If there's space left in the capacity, gets next customer(s) to fill up cap
 def get_next(state, end_idx): 
@@ -149,11 +149,16 @@ def noshow_readd(state, noshow_list, noshow_timer, idx):
     return state, noshow_list, noshow_timer
 
 def noshow_refresh (noshow_list, noshow_timer):
+    to_delete = []
     for idx, elem in enumerate(noshow_list):
         elapsed = (datetime.now() - noshow_timer[idx])
         if elapsed.seconds >= NOSHOW_TIME_LIM:
-            noshow_list.pop(idx)
-            noshow_timer.pop(idx)
+            to_delete.append(idx)
+
+    to_delete.reverse()
+    for idx in to_delete: 
+        noshow_list.pop(idx)
+        noshow_timer.pop(idx)
     return noshow_list, noshow_timer
 
 def main():
@@ -165,27 +170,33 @@ def main():
     noshow_list = []
     noshow_timer = []
 
-    # assume that the sheet starts at A2 due to column labels
-    sheet_idx = SHEET_IDX_START
-    end_idx = SHEET_IDX_START
+    start_idx = 0
+    end_idx = 0
     # check to see if file is present
     try: 
         idx_file = open(INDEX_FILE_NAME, 'r')
-        sheet_idx = int(idx_file.readline())
+        start_idx = int(idx_file.readline())
+        end_idx = start_idx
         idx_file.close()
     except: 
         idx_file = open(INDEX_FILE_NAME, 'w')
         idx_file.close()
 
     # first population of state, populate to capacity 
+    count = 0
     for idx, row in enumerate(values):
-        if idx >= (NUM_SERVING+NUM_WAITING):
+        if count >= (NUM_SERVING+NUM_WAITING):
             break
-        if row: 
-            state.append(row)
-            end_idx +=1
-        else: 
+        if idx < start_idx:
             pass
+        else: 
+            if row: 
+                state.append(row)
+                count+=1
+            else: 
+                pass
+            end_idx+=1
+
 
     command = raw_input("--> ")
     split_command = command.split()
@@ -221,7 +232,7 @@ def main():
         split_command = command.split()
 
     idx_file = open(INDEX_FILE_NAME, 'w')
-    idx_file.write(str(sheet_idx))
+    idx_file.write(str(end_idx))
     idx_file.close()
 
 if __name__ == '__main__':
