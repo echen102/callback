@@ -19,7 +19,6 @@ This is a basic callback system. The finished product integrates with google spr
 - [x] user can set anyone to no show: noshow INDEX
 - [x] user can move anyone in the noshow queue to the queue: noshow readd INDEX
 - [x] user can refresh no show queue: noshow refresh 
-- [ ] Write done to spreadsheet during done function 
 - [ ] Add a number of times texted counter next to each name
 
 ## Usage

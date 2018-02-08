@@ -79,14 +79,14 @@ def get_values():
     return values
 
 # Prints out the current state and should always be max the capacity specified
-def print_state(state): 
+def print_state(state, text_count): 
     try: 
         print ("Current State:")
         for idx, elem in enumerate(state): 
             if idx < NUM_SERVING: 
-                print ("%d : [SERVING] %s %s" %(idx, elem[NAME], elem[PHONE])) 
+                print ("%d : [SERVING] text count %d | %s %s" %(idx, text_count[idx], elem[NAME], elem[PHONE])) 
             else: 
-                print ("%d : [WAITING] %s %s" %(idx, elem[NAME], elem[PHONE]))
+                print ("%d : [WAITING] text count %d | %s %s" %(idx, text_count[idx], elem[NAME], elem[PHONE]))
     except:
         print ("No Data") 
 
@@ -109,15 +109,16 @@ def get_next(state, end_idx):
 
 # removes individual from queue
 # need to implement writing done to google spreadsheet here
-def done(state, idx):
+def done(state, idx, text_count):
     try: 
         idx = int(idx)
         if idx >= NUM_SERVING: 
             raise Exception()
         state.pop(idx)
+        text_count.pop(idx)
     except: 
         print ("Invalid Index")
-    return state
+    return state, text_count
 
 def print_noshow(noshow_list, noshow_timer): 
     print ("No Show List:")
@@ -125,28 +126,29 @@ def print_noshow(noshow_list, noshow_timer):
         print ("None")
     for idx, elem in enumerate(noshow_list):
         elapsed= (datetime.now() - noshow_timer[idx])
-        print ("%d : %s time elapsed: %d:%02d" %(idx, elem[NAME], (elapsed.seconds)//60, (elapsed.seconds)%60))        
+        print ("%d : time elapsed: %d:%02d | %s " %(idx, (elapsed.seconds)//60, (elapsed.seconds)%60, elem[NAME]))        
 
-def move_to_noshow(state, noshow_list, noshow_timer, idx):
+def move_to_noshow(state, noshow_list, noshow_timer, idx, text_count):
     try: 
         idx = int(idx)
         to_add = state.pop(idx)
-        print (to_add)
+        text_count.pop(idx)
         noshow_list.append(to_add)
         noshow_timer.append(datetime.now())
     except: 
         print ("Invalid Index")
-    return state, noshow_list, noshow_timer
+    return state, noshow_list, noshow_timer, text_count
 
-def noshow_readd(state, noshow_list, noshow_timer, idx):
+def noshow_readd(state, noshow_list, noshow_timer, idx, text_count):
     try: 
         idx = int(idx)
         to_add = noshow_list.pop(idx)
         noshow_timer.pop(idx)
         state.append(to_add)
+        text_count.append(0)
     except: 
         print ("Invalid Index")
-    return state, noshow_list, noshow_timer
+    return state, noshow_list, noshow_timer, text_count
 
 def noshow_refresh (noshow_list, noshow_timer):
     to_delete = []
@@ -161,6 +163,18 @@ def noshow_refresh (noshow_list, noshow_timer):
         noshow_timer.pop(idx)
     return noshow_list, noshow_timer
 
+def text_number(state, idx, text_count):
+    try: 
+        idx = int(idx)
+        # need to integrate twillio api here
+        print ("Calling this number")
+        print (state[idx][NAME])
+        print (state[idx][PHONE])
+        text_count[idx]+=1
+    except:
+        print ("Invalid Index")
+    return state, text_count
+
 def main():
 
     values = get_values()
@@ -169,6 +183,7 @@ def main():
     state = []
     noshow_list = []
     noshow_timer = []
+    text_count = []
 
     start_idx = 0
     end_idx = 0
@@ -192,6 +207,7 @@ def main():
         else: 
             if row: 
                 state.append(row)
+                text_count.append(0)
                 count+=1
             else: 
                 pass
@@ -207,7 +223,7 @@ def main():
             state, end_idx = get_next(state, end_idx)
         elif split_command[0] == "done": 
             try: 
-                state = done(state, split_command[1])
+                state, text_count = done(state, split_command[1], text_count)
             except: 
                 print ("Please include an index.")
         elif split_command[0] == "noshow":
@@ -219,15 +235,16 @@ def main():
                 if split_command[1] == "refresh":
                     noshow_list, noshow_timer = noshow_refresh(noshow_list, noshow_timer)
                 elif split_command[1] == "readd":
-                    state, noshow_list, noshow_timer = noshow_readd(state, noshow_list, noshow_timer, split_command[2])
+                    state, noshow_list, noshow_timer, text_count = noshow_readd(state, noshow_list, noshow_timer, split_command[2], text_count)
                 else: 
                     # implements noshow INDEX
-                    state, noshow_list, noshow_timer = move_to_noshow(state, noshow_list, noshow_timer, split_command[1])
-                pass
+                    state, noshow_list, noshow_timer, text_count = move_to_noshow(state, noshow_list, noshow_timer, split_command[1], text_count)
+        elif split_command[0] == "text":
+            state, text_count = text_number(state, split_command[1], text_count)
         else: 
             print ("Command not supported.")
 
-        print_state(state)
+        print_state(state, text_count)
         command = raw_input("--> ")
         split_command = command.split()
 
