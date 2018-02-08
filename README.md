@@ -3,7 +3,7 @@
 This is a basic callback system. The finished product integrates with google spreadsheets and twillio to allow users to sign up and receive a text when the service is ready for them. 
 
 ## Requirements
-* Twillio API (not yet integrated)
+* Twilio API (not yet integrated)
 * Google sheets API
 * Python 3.x +
 
@@ -13,13 +13,13 @@ This is a basic callback system. The finished product integrates with google spr
 - [x] user can get next customer
     Useful when there aren't enough people in line
 - [x] user can either print out current state : current
-- [ ] user can send text to anyone in the queue : text INDEX
+- [x] user can send text to anyone in the queue : text INDEX
 - [x] user can set in progress to done : done INDEX
 - [x] user can see no show queue: noshow
 - [x] user can set anyone to no show: noshow INDEX
 - [x] user can move anyone in the noshow queue to the queue: noshow readd INDEX
 - [x] user can refresh no show queue: noshow refresh 
-- [ ] Add a number of times texted counter next to each name
+- [x] Add a number of times texted counter next to each name
 
 ## Usage
 

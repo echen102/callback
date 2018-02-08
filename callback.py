@@ -3,7 +3,9 @@ from __future__ import print_function
 import httplib2
 import os
 import pdb 
+import sys
 from datetime import datetime
+from twilio.rest import Client
 
 from apiclient import discovery
 from oauth2client import client
@@ -24,7 +26,7 @@ APPLICATION_NAME = 'callback'
 
 NUM_SERVING = 2
 NUM_WAITING = 3
-NOSHOW_TIME_LIM = 30
+NOSHOW_TIME_LIM = 300
 INDEX_FILE_NAME = 'idx_file.dat'
 # sheet indicies
 NAME = 1
@@ -32,7 +34,8 @@ ID = 2
 PHONE = 3
 EMAIL = 4
 
-SPREADSHEET_ID = '1i119SHQA2Om0ykgpIoP8V4GQOMZf-IrVAotu9yV4m3k'
+# my own number to send test texts to
+twilio_number_testing = os.environ.get('TWILIO_NUMBER_TESTING')
 
 def get_credentials():
     """Gets valid user credentials from storage.
@@ -63,7 +66,7 @@ def get_credentials():
     return credentials
 
 # gets all values from spread sheet
-def get_values():
+def get_values(spreadsheet_id):
     credentials = get_credentials()
     http = credentials.authorize(httplib2.Http())
     discoveryUrl = ('https://sheets.googleapis.com/$discovery/rest?'
@@ -74,7 +77,7 @@ def get_values():
     #spreadsheetId = '1i119SHQA2Om0ykgpIoP8V4GQOMZf-IrVAotu9yV4m3k'
     rangeName = 'A2:E'
     result = service.spreadsheets().values().get(
-        spreadsheetId=SPREADSHEET_ID, range=rangeName).execute()
+        spreadsheetId=spreadsheet_id, range=rangeName).execute()
     values = result.get('values', [])
     return values
 
@@ -84,28 +87,31 @@ def print_state(state, text_count):
         print ("Current State:")
         for idx, elem in enumerate(state): 
             if idx < NUM_SERVING: 
-                print ("%d : [SERVING] text count %d | %s %s" %(idx, text_count[idx], elem[NAME], elem[PHONE])) 
+                print ("%d : [SERVING] text count %d | %s %s" %(idx,
+                    text_count[idx], elem[NAME], elem[PHONE])) 
             else: 
-                print ("%d : [WAITING] text count %d | %s %s" %(idx, text_count[idx], elem[NAME], elem[PHONE]))
+                print ("%d : [WAITING] text count %d | %s %s" %(idx,
+                    text_count[idx], elem[NAME], elem[PHONE]))
     except:
         print ("No Data") 
 
 # If there's space left in the capacity, gets next customer(s) to fill up cap
-def get_next(state, end_idx): 
-    values = get_values()
+def get_next(spreadsheet_id, state, end_idx, text_count): 
+    values = get_values(spreadsheet_id)
 
     # fill in remaining slots
 
     if len(state) < (NUM_SERVING + NUM_WAITING): 
         try: 
             state.append(values[end_idx])
+            text_count.append(0)
             end_idx+=1
         except: 
             print ("No more clients")
     else: 
         print ("Too many people in line!")
 
-    return state, end_idx
+    return state, end_idx, text_count
 
 # removes individual from queue
 # need to implement writing done to google spreadsheet here
@@ -126,7 +132,8 @@ def print_noshow(noshow_list, noshow_timer):
         print ("None")
     for idx, elem in enumerate(noshow_list):
         elapsed= (datetime.now() - noshow_timer[idx])
-        print ("%d : time elapsed: %d:%02d | %s " %(idx, (elapsed.seconds)//60, (elapsed.seconds)%60, elem[NAME]))        
+        print ("%d : time elapsed: %d:%02d | %s " %(idx, (elapsed.seconds)//60,
+            (elapsed.seconds)%60, elem[NAME]))        
 
 def move_to_noshow(state, noshow_list, noshow_timer, idx, text_count):
     try: 
@@ -163,21 +170,40 @@ def noshow_refresh (noshow_list, noshow_timer):
         noshow_timer.pop(idx)
     return noshow_list, noshow_timer
 
-def text_number(state, idx, text_count):
+def text_number(account_sid, auth_token, twilio_number, state, idx, text_count):
     try: 
         idx = int(idx)
         # need to integrate twillio api here
-        print ("Calling this number")
-        print (state[idx][NAME])
+        print ("Texting %s" %(state[idx][NAME]))
         print (state[idx][PHONE])
         text_count[idx]+=1
+        message = "Hello " + state[idx][NAME] + "! Please get in line."
+        client = Client(account_sid, auth_token)
+        client.api.account.messages.create(
+            to= twilio_number_testing,
+            from_=twilio_number,
+            body=message)
     except:
-        print ("Invalid Index")
+        print ("Invalid Index or text didn't go through?")
     return state, text_count
 
-def main():
+def load_config():
+    spreadsheet_id = os.environ.get('SPREADSHEET_ID')
+    twilio_account_sid = os.environ.get('TWILIO_ACCOUNT_SID')
+    twilio_auth_token = os.environ.get('TWILIO_AUTH_TOKEN')
+    twilio_number = os.environ.get('TWILIO_NUMBER')
 
-    values = get_values()
+    if not all([spreadsheet_id, twilio_account_sid, twilio_auth_token,
+        twilio_number]):
+        print ("Whoops! Please set environment variables")
+        sys.exit()
+
+    return (spreadsheet_id, twilio_number, twilio_account_sid,
+        twilio_auth_token)
+
+def main():
+    spreadsheet_id, twilio_number, account_sid, auth_token = load_config()
+    values = get_values(spreadsheet_id)
 
     # initializations 
     state = []
@@ -220,7 +246,7 @@ def main():
         if command == "current": 
             pass
         elif command == "get next":
-            state, end_idx = get_next(state, end_idx)
+            state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, text_count)
         elif split_command[0] == "done": 
             try: 
                 state, text_count = done(state, split_command[1], text_count)
@@ -233,14 +259,20 @@ def main():
             else: 
                 # implement noshow refresh
                 if split_command[1] == "refresh":
-                    noshow_list, noshow_timer = noshow_refresh(noshow_list, noshow_timer)
+                    noshow_list, noshow_timer = noshow_refresh(noshow_list,
+                        noshow_timer)
                 elif split_command[1] == "readd":
-                    state, noshow_list, noshow_timer, text_count = noshow_readd(state, noshow_list, noshow_timer, split_command[2], text_count)
+                    state, noshow_list, noshow_timer, text_count = \
+                        noshow_readd(state, noshow_list, noshow_timer,
+                            split_command[2], text_count)
                 else: 
                     # implements noshow INDEX
-                    state, noshow_list, noshow_timer, text_count = move_to_noshow(state, noshow_list, noshow_timer, split_command[1], text_count)
+                    state, noshow_list, noshow_timer, text_count = \
+                        move_to_noshow(state, noshow_list, noshow_timer,
+                            split_command[1], text_count)
         elif split_command[0] == "text":
-            state, text_count = text_number(state, split_command[1], text_count)
+            state, text_count = text_number(account_sid, auth_token,
+                twilio_number, state, split_command[1], text_count)
         else: 
             print ("Command not supported.")
 
