@@ -23,6 +23,7 @@ except ImportError:
 SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'callback'
+RESULTS_FILE = 'results.txt'
 
 NUM_SERVING = 2
 NUM_WAITING = 3
@@ -113,15 +114,32 @@ def get_next(spreadsheet_id, state, end_idx, text_count):
 
     return state, end_idx, text_count
 
+def get_next_batch(spreadsheet_id, state, end_idx, text_count, batch_num):
+    for elem in range(batch_num):
+        try: 
+            state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, 
+                text_count)
+        except: 
+            print ("No more clients")
+            return state, end_idx, text_count
+    return state, end_idx, text_count
 # removes individual from queue
-# need to implement writing done to google spreadsheet here
-def done(state, idx, text_count):
+# id_num is the id of the person who serviced
+def done(state, idx, text_count, servicer):
     try: 
         idx = int(idx)
         if idx >= NUM_SERVING: 
             raise Exception()
-        state.pop(idx)
+        removed = state.pop(idx)
         text_count.pop(idx)
+
+        entry = removed[NAME] + " " + removed[ID] + " " + removed[PHONE] + " " + removed[EMAIL]
+
+        done_result = str(datetime.now()) + " Serviced by: " + str(servicer) + " | Serviced: " + str(entry) + "\n"
+        # write to file with time stamp + name + photographer 
+        results = open(RESULTS_FILE, 'a+')
+        results.write(str(done_result))
+        results.close()
     except: 
         print ("Invalid Index")
     return state, text_count
@@ -173,18 +191,30 @@ def noshow_refresh (noshow_list, noshow_timer):
 def text_number(account_sid, auth_token, twilio_number, state, idx, text_count):
     try: 
         idx = int(idx)
-        # need to integrate twillio api here
         print ("Texting %s" %(state[idx][NAME]))
         print (state[idx][PHONE])
+        phone_num = str("+1" + (state[idx][PHONE]))
         text_count[idx]+=1
         message = "Hello " + state[idx][NAME] + "! Please get in line."
         client = Client(account_sid, auth_token)
         client.api.account.messages.create(
-            to= twilio_number_testing,
+            to= phone_num,
             from_=twilio_number,
             body=message)
     except:
         print ("Invalid Index or text didn't go through?")
+    return state, text_count
+
+# allowing for manual entry of a person into the current queue 
+def manual_entry(state, text_count):
+    entry_time = str(datetime.now())
+    full_name = raw_input("Enter Full Name: ")
+    id_num = raw_input("Enter ID: ")
+    phone_num = raw_input("Enter Phone Number: ")
+    email = raw_input("Enter Email: ")
+    new_entry = [entry_time, full_name, id_num, phone_num, email]
+    state.append(new_entry)
+    text_count.append(0)
     return state, text_count
 
 def load_config():
@@ -245,11 +275,20 @@ def main():
     while command != "quit":
         if command == "current": 
             pass
-        elif command == "get next":
-            state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, text_count)
+        elif split_command[0] == "get" and split_command[1] == "next":
+            if len(split_command) == 2: 
+                state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, text_count)
+            elif len(split_command) ==3: 
+                try: 
+                    state, end_idx, text_count = get_next_batch(spreadsheet_id, state, end_idx,
+                     text_count, int(split_command[2]))
+                except: 
+                    print ("Please include an index.")
+            else: 
+                print ("Incorrect format.")
         elif split_command[0] == "done": 
             try: 
-                state, text_count = done(state, split_command[1], text_count)
+                state, text_count = done(state, split_command[1], text_count, split_command[2])
             except: 
                 print ("Please include an index.")
         elif split_command[0] == "noshow":
@@ -273,6 +312,8 @@ def main():
         elif split_command[0] == "text":
             state, text_count = text_number(account_sid, auth_token,
                 twilio_number, state, split_command[1], text_count)
+        elif command == "manual entry": 
+            state, text_count = manual_entry(state, text_count) 
         else: 
             print ("Command not supported.")
 

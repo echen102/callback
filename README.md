@@ -42,8 +42,10 @@ Then run the callback file to start the program
 ```
 
 You'll have two main "lines":
+
     * current line
         * The current state keeps track of who is being served and who is physically waiting in line.
+        
     * no show line
         * This list keeps track of those who don't show up in time, and we're ready to service them. We can move individuals to the no show line to give them a buffer of a user specified time (the user is you), and can re-add them to the end of the current state if they do show up. 
         * We allow the user to also clear out all the no shows who have exceeded the specified buffer time. So if you want to boot them all out, you can. 
@@ -74,6 +76,7 @@ Note: INDEX must be replaced by a numerical number - the index of the individual
 |noshow refresh | Refreshes the list, and removes all individuals whose elapsed times have exceeded the user set limit. |
 | noshow readd INDEX | Re adds the individual at INDEX in the noshow line to the current line. Removes this individual from the no show line. |
 | noshow INDEX | Moves the individual at INDEX in the current line to the noshow line. Stores the time at which this individual was moved to the noshow line.|
+| manual entry | Allows user to append a manual entry to the end of the queue.|
 | quit | Exit the program, and save the furthest index to file|
 ## Assumptions
 We've made a couple of assumptions about the formatting of the Google Form, and some of its data. 
