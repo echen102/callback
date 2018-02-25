@@ -71,7 +71,7 @@ Note: INDEX must be replaced by a numerical number - the index of the individual
 | current  | Displays the current line state, including who is currently being served, who is waiting, and how many times you've texted each individual in line. Note that this text count resets when an individual is removed from the list.  |
 | get next | Gets the next entry, and adds this person to the current line.  |
 | text INDEX | Sends pre-formatted text message to the individual's phone.|
-| done INDEX | Removes the person at INDEX, and moves the next person in line as being serviced|
+| done INDEX SERVICER | Removes the person at INDEX, and moves the next person in line as being serviced. Also logs who was serviced and by whom in results.txt|
 | noshow | Displays the current no show line, and includes a time elapsed from when that individual was first moved to the noshow line|
 |noshow refresh | Refreshes the list, and removes all individuals whose elapsed times have exceeded the user set limit. |
 | noshow readd INDEX | Re adds the individual at INDEX in the noshow line to the current line. Removes this individual from the no show line. |
