@@ -70,6 +70,7 @@ Note: INDEX must be replaced by a numerical number - the index of the individual
 | ------------- | ------------- |
 | current  | Displays the current line state, including who is currently being served, who is waiting, and how many times you've texted each individual in line. Note that this text count resets when an individual is removed from the list.  |
 | get next | Gets the next entry, and adds this person to the current line.  |
+| get next NUMBER| Batch gets the next NUM entry, and adds NUM people to the current line. This exits if there are no more clients in the spreadsheet, or if the number of people in line exceed the set max line capacity. |
 | text INDEX | Sends pre-formatted text message to the individual's phone.|
 | done INDEX SERVICER | Removes the person at INDEX, and moves the next person in line as being serviced. Also logs who was serviced and by whom in results.txt|
 | noshow | Displays the current no show line, and includes a time elapsed from when that individual was first moved to the noshow line|
