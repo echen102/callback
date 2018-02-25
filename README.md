@@ -44,11 +44,11 @@ Then run the callback file to start the program
 You'll have two main "lines":
 
 * current line
- * The current state keeps track of who is being served and who is physically waiting in line.
+    * The current state keeps track of who is being served and who is physically waiting in line.
         
 * no show line
- * This list keeps track of those who don't show up in time, and we're ready to service them. We can move individuals to the no show line to give them a buffer of a user specified time (the user is you), and can re-add them to the end of the current state if they do show up. 
- * We allow the user to also clear out all the no shows who have exceeded the specified buffer time. So if you want to boot them all out, you can. 
+    * This list keeps track of those who don't show up in time, and we're ready to service them. We can move individuals to the no show line to give them a buffer of a user specified time (the user is you), and can re-add them to the end of the current state if they do show up. 
+    * We allow the user to also clear out all the no shows who have exceeded the specified buffer time. So if you want to boot them all out, you can. 
 
 The program will first populate the current line with N number of people, where N is the number of people you want to serve at once and the number of people you want physically waiting in line (but still governed by their order in the virtual line). If there aren't N people, the program populates however many there are. 
 
