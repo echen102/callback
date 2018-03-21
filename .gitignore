@@ -5,5 +5,3 @@
 # *.[oa]
 # *~
 *.dat
-client_secret.json
-env.sh
