@@ -26,6 +26,9 @@ Since Google Forms can easily allow different computers to collect data at one t
 - [x] user can refresh no show queue: noshow refresh
 - [x] Add a number of times texted counter next to each name
 - [ ] develop local user interface
+- [x] user can delete customer arbitrarily
+- [x] users can text the entire list at once
+- [ ] users can send emails
 
 ## Usage Overview
 
@@ -72,11 +75,14 @@ Note: INDEX must be replaced by a numerical number - the index of the individual
 | get next | Gets the next entry, and adds this person to the current line.  |
 | get next NUMBER| Batch gets the next NUM entry, and adds NUM people to the current line. This exits if there are no more clients in the spreadsheet, or if the number of people in line exceed the set max line capacity. |
 | text INDEX | Sends pre-formatted text message to the individual's phone.|
+| text all | Sends pre-formatted text message to all individuals on the serving list.|
 | done INDEX SERVICER | Removes the person at INDEX, and moves the next person in line as being serviced. Also logs who was serviced and by whom in results.txt|
+| delete INDEX | Deletes the individual at INDEX.|
 | noshow | Displays the current no show line, and includes a time elapsed from when that individual was first moved to the noshow line|
 |noshow refresh | Refreshes the list, and removes all individuals whose elapsed times have exceeded the user set limit. |
 | noshow readd INDEX | Re adds the individual at INDEX in the noshow line to the current line. Removes this individual from the no show line. |
 | noshow INDEX | Moves the individual at INDEX in the current line to the noshow line. Stores the time at which this individual was moved to the noshow line.|
+| noshow delete INDEX | Deletes the individual at INDEX on the noshow list.|
 | manual entry | Allows user to append a manual entry to the end of the queue.|
 | quit | Exit the program, and save the furthest index to file|
 ## Assumptions

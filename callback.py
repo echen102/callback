@@ -2,7 +2,7 @@
 from __future__ import print_function
 import httplib2
 import os
-import pdb 
+import pdb
 import sys
 from datetime import datetime
 from twilio.rest import Client
@@ -20,15 +20,16 @@ except ImportError:
 
 # If modifying these scopes, delete your previously saved credentials
 # at ~/.credentials/callback.json
-SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly'
+SCOPES = 'https://www.googleapis.com/auth/spreadsheets'
 CLIENT_SECRET_FILE = 'client_secret.json'
 APPLICATION_NAME = 'callback'
 RESULTS_FILE = 'results.txt'
 
-NUM_SERVING = 2
-NUM_WAITING = 3
+NUM_SERVING = 20
+NUM_WAITING = 0
 NOSHOW_TIME_LIM = 300
 INDEX_FILE_NAME = 'idx_file.dat'
+
 # sheet indicies
 NAME = 1
 ID = 2
@@ -83,52 +84,53 @@ def get_values(spreadsheet_id):
     return values
 
 # Prints out the current state and should always be max the capacity specified
-def print_state(state, text_count): 
-    try: 
+def print_state(state, text_count):
+    try:
         print ("Current State:")
-        for idx, elem in enumerate(state): 
-            if idx < NUM_SERVING: 
+        for idx, elem in enumerate(state):
+            if idx < NUM_SERVING:
                 print ("%d : [SERVING] text count %d | %s %s" %(idx,
-                    text_count[idx], elem[NAME], elem[PHONE])) 
-            else: 
+                    text_count[idx], elem[NAME], elem[PHONE]))
+            else:
                 print ("%d : [WAITING] text count %d | %s %s" %(idx,
                     text_count[idx], elem[NAME], elem[PHONE]))
     except:
-        print ("No Data") 
+        print ("No Data")
 
 # If there's space left in the capacity, gets next customer(s) to fill up cap
-def get_next(spreadsheet_id, state, end_idx, text_count): 
+def get_next(spreadsheet_id, state, end_idx, text_count):
     values = get_values(spreadsheet_id)
 
     # fill in remaining slots
 
-    if len(state) < (NUM_SERVING + NUM_WAITING): 
-        try: 
+    if len(state) < (NUM_SERVING + NUM_WAITING):
+        try:
             state.append(values[end_idx])
             text_count.append(0)
             end_idx+=1
-        except: 
+        except:
             print ("No more clients")
-    else: 
+    else:
         print ("Too many people in line!")
 
     return state, end_idx, text_count
 
 def get_next_batch(spreadsheet_id, state, end_idx, text_count, batch_num):
     for elem in range(batch_num):
-        try: 
-            state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, 
+        try:
+            state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx,
                 text_count)
-        except: 
+        except:
             print ("No more clients")
             return state, end_idx, text_count
     return state, end_idx, text_count
+
 # removes individual from queue
 # id_num is the id of the person who serviced
 def done(state, idx, text_count, servicer):
-    try: 
+    try:
         idx = int(idx)
-        if idx >= NUM_SERVING: 
+        if idx >= NUM_SERVING:
             raise Exception()
         removed = state.pop(idx)
         text_count.pop(idx)
@@ -136,42 +138,54 @@ def done(state, idx, text_count, servicer):
         entry = removed[NAME] + " " + removed[ID] + " " + removed[PHONE] + " " + removed[EMAIL]
 
         done_result = str(datetime.now()) + " Serviced by: " + str(servicer) + " | Serviced: " + str(entry) + "\n"
-        # write to file with time stamp + name + photographer 
+        # write to file with time stamp + name + photographer
         results = open(RESULTS_FILE, 'a+')
         results.write(str(done_result))
         results.close()
-    except: 
+    except:
         print ("Invalid Index")
     return state, text_count
 
-def print_noshow(noshow_list, noshow_timer): 
+# deletes individual from queue
+def delete(state, idx, text_count):
+    try:
+        idx = int(idx)
+        if idx >= NUM_SERVING:
+            raise Exception()
+        state.pop(idx)
+        text_count.pop(idx)
+    except:
+        print ("Invalid Index")
+    return state, text_count
+
+def print_noshow(noshow_list, noshow_timer):
     print ("No Show List:")
     if not noshow_list:
         print ("None")
     for idx, elem in enumerate(noshow_list):
         elapsed= (datetime.now() - noshow_timer[idx])
         print ("%d : time elapsed: %d:%02d | %s " %(idx, (elapsed.seconds)//60,
-            (elapsed.seconds)%60, elem[NAME]))        
+            (elapsed.seconds)%60, elem[NAME]))
 
 def move_to_noshow(state, noshow_list, noshow_timer, idx, text_count):
-    try: 
+    try:
         idx = int(idx)
         to_add = state.pop(idx)
         text_count.pop(idx)
         noshow_list.append(to_add)
         noshow_timer.append(datetime.now())
-    except: 
+    except:
         print ("Invalid Index")
     return state, noshow_list, noshow_timer, text_count
 
 def noshow_readd(state, noshow_list, noshow_timer, idx, text_count):
-    try: 
+    try:
         idx = int(idx)
         to_add = noshow_list.pop(idx)
         noshow_timer.pop(idx)
         state.append(to_add)
         text_count.append(0)
-    except: 
+    except:
         print ("Invalid Index")
     return state, noshow_list, noshow_timer, text_count
 
@@ -183,13 +197,23 @@ def noshow_refresh (noshow_list, noshow_timer):
             to_delete.append(idx)
 
     to_delete.reverse()
-    for idx in to_delete: 
+    for idx in to_delete:
         noshow_list.pop(idx)
         noshow_timer.pop(idx)
     return noshow_list, noshow_timer
 
+def noshow_delete(noshow_list, noshow_timer, idx):
+    try:
+        idx = int(idx)
+        noshow_list.pop(idx)
+        noshow_timer.pop(idx)
+    except:
+        print ("Invalid Index")
+
+    return noshow_list, noshow_timer
+
 def text_number(account_sid, auth_token, twilio_number, state, idx, text_count):
-    try: 
+    try:
         idx = int(idx)
         print ("Texting %s" %(state[idx][NAME]))
         print (state[idx][PHONE])
@@ -205,7 +229,14 @@ def text_number(account_sid, auth_token, twilio_number, state, idx, text_count):
         print ("Invalid Index or text didn't go through?")
     return state, text_count
 
-# allowing for manual entry of a person into the current queue 
+# Text everyone on the List
+def text_all(account_sid, auth_token, twilio_number, state, text_count):
+    for i in range(len(state)):
+        state, text_count = text_number(account_sid, auth_token,
+                            twilio_number, state, i, text_count)
+    return state, text_count
+
+# allowing for manual entry of a person into the current queue
 def manual_entry(state, text_count):
     entry_time = str(datetime.now())
     full_name = raw_input("Enter Full Name: ")
@@ -235,7 +266,7 @@ def main():
     spreadsheet_id, twilio_number, account_sid, auth_token = load_config()
     values = get_values(spreadsheet_id)
 
-    # initializations 
+    # initializations
     state = []
     noshow_list = []
     noshow_timer = []
@@ -244,58 +275,62 @@ def main():
     start_idx = 0
     end_idx = 0
     # check to see if file is present
-    try: 
+    try:
         idx_file = open(INDEX_FILE_NAME, 'r')
         start_idx = int(idx_file.readline())
         end_idx = start_idx
         idx_file.close()
-    except: 
+    except:
         idx_file = open(INDEX_FILE_NAME, 'w')
         idx_file.close()
 
-    # first population of state, populate to capacity 
+    # first population of state, populate to capacity
     count = 0
     for idx, row in enumerate(values):
         if count >= (NUM_SERVING+NUM_WAITING):
             break
         if idx < start_idx:
             pass
-        else: 
-            if row: 
+        else:
+            if row:
                 state.append(row)
                 text_count.append(0)
                 count+=1
-            else: 
+            else:
                 pass
             end_idx+=1
 
+    print(start_idx)
+    print(end_idx)
 
     command = raw_input("--> ")
     split_command = command.split()
     while command != "quit":
-        if command == "current": 
+        if not split_command or not command:
+            pass
+        elif command == "current":
             pass
         elif split_command[0] == "get" and split_command[1] == "next":
-            if len(split_command) == 2: 
+            if len(split_command) == 2:
                 state, end_idx, text_count = get_next(spreadsheet_id, state, end_idx, text_count)
-            elif len(split_command) ==3: 
-                try: 
+            elif len(split_command) ==3:
+                try:
                     state, end_idx, text_count = get_next_batch(spreadsheet_id, state, end_idx,
                      text_count, int(split_command[2]))
-                except: 
+                except:
                     print ("Please include an index.")
-            else: 
+            else:
                 print ("Incorrect format.")
-        elif split_command[0] == "done": 
-            try: 
+        elif split_command[0] == "done":
+            try:
                 state, text_count = done(state, split_command[1], text_count, split_command[2])
-            except: 
+            except:
                 print ("Please include an index.")
         elif split_command[0] == "noshow":
             if len(split_command) == 1:
                 # implement show noshow line here
                 print_noshow(noshow_list, noshow_timer)
-            else: 
+            else:
                 # implement noshow refresh
                 if split_command[1] == "refresh":
                     noshow_list, noshow_timer = noshow_refresh(noshow_list,
@@ -304,17 +339,31 @@ def main():
                     state, noshow_list, noshow_timer, text_count = \
                         noshow_readd(state, noshow_list, noshow_timer,
                             split_command[2], text_count)
-                else: 
+                elif split_command[1] == "delete":
+                    noshow_list, noshow_timer = noshow_delete(noshow_list,
+                        noshow_timer, split_command[2])
+                else:
                     # implements noshow INDEX
                     state, noshow_list, noshow_timer, text_count = \
                         move_to_noshow(state, noshow_list, noshow_timer,
                             split_command[1], text_count)
         elif split_command[0] == "text":
-            state, text_count = text_number(account_sid, auth_token,
-                twilio_number, state, split_command[1], text_count)
-        elif command == "manual entry": 
-            state, text_count = manual_entry(state, text_count) 
-        else: 
+            if len(split_command) < 2:
+                print ("Please use text[index number|all]")
+            elif split_command[1] == "all":
+                state, text_count = text_all(account_sid, auth_token,
+                    twilio_number, state, text_count)
+            else:
+                state, text_count = text_number(account_sid, auth_token,
+                    twilio_number, state, split_command[1], text_count)
+        elif command == "manual entry":
+            state, text_count = manual_entry(state, text_count)
+        elif split_command[0] == "delete":
+            try:
+                state, text_count = delete(state, split_command[1], text_count)
+            except:
+                print ("Please include an index.")
+        else:
             print ("Command not supported.")
 
         print_state(state, text_count)
@@ -327,4 +376,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
