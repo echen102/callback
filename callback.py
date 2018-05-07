@@ -6,7 +6,7 @@ import pdb
 import sys
 from datetime import datetime
 from twilio.rest import Client
-
+import smtplib
 from apiclient import discovery
 from oauth2client import client
 from oauth2client import tools
@@ -262,6 +262,34 @@ def load_config():
     return (spreadsheet_id, twilio_number, twilio_account_sid,
         twilio_auth_token)
 
+# Email everyone on the list
+def email_all(state, text_count):
+    for i in range(len(state)):
+        state, text_count = send_email(state, i, text_count)
+    return state, text_count
+
+# Email person idx on list
+def send_email(state, idx, text_count):
+    idx = int(idx)
+    server = smtplib.SMTP('outbound.cisco.com', 25)
+    server.starttls()
+    with open("message.eml", "r") as f:
+        mail_form = f.read()
+    msg_from = "paquach@cisco.com"
+    msg_to = state[idx][EMAIL]
+    message = "Hello " + state[idx][NAME] + "! Please come to <room> for your picture!"
+    msg_subject = "CAAN Photo Booth"
+    try:
+        print ("Emailing %s" %(state[idx][NAME]))
+        print (state[idx][EMAIL])
+        text_count[idx]+=1
+        #message = "Hello " + state[idx][NAME] + "! Please get in line."
+        server.sendmail(msg_from, msg_to, mail_form.format(msg_from, msg_to, msg_subject, message))
+    except Exception as e:
+        print ("Invalid Index or email didn't go through?")
+        print(e)
+    return state, text_count
+
 def main():
     spreadsheet_id, twilio_number, account_sid, auth_token = load_config()
     values = get_values(spreadsheet_id)
@@ -349,13 +377,20 @@ def main():
                             split_command[1], text_count)
         elif split_command[0] == "text":
             if len(split_command) < 2:
-                print ("Please use text[index number|all]")
+                print ("Please use text [index number|all]")
             elif split_command[1] == "all":
                 state, text_count = text_all(account_sid, auth_token,
                     twilio_number, state, text_count)
             else:
                 state, text_count = text_number(account_sid, auth_token,
                     twilio_number, state, split_command[1], text_count)
+        elif split_command[0] == "email":
+            if len(split_command) < 2:
+                print ("Please use email [index number|all]")
+            elif split_command[1] == "all":
+                state, text_count = email_all(state, text_count)
+            else:
+                state, text_count = send_email(state, split_command[1], text_count)
         elif command == "manual entry":
             state, text_count = manual_entry(state, text_count)
         elif split_command[0] == "delete":

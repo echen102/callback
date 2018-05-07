@@ -28,7 +28,7 @@ Since Google Forms can easily allow different computers to collect data at one t
 - [ ] develop local user interface
 - [x] user can delete customer arbitrarily
 - [x] users can text the entire list at once
-- [ ] users can send emails
+- [x] users can send emails
 
 ## Usage Overview
 

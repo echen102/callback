@@ -1,0 +1,8 @@
+Mime-Version: 1.0
+To: {0}
+From: {1}
+Subject: {2}
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: quoted-printable
+
+{3}

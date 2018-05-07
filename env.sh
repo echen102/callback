@@ -1,4 +1,4 @@
-#!/bin/sh 
+#!/bin/sh
 export SPREADSHEET_ID=""
 # Find these values at https://twilio.com/user/account
 export TWILIO_ACCOUNT_SID=""
