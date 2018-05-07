@@ -271,20 +271,19 @@ def email_all(state, text_count):
 # Email person idx on list
 def send_email(state, idx, text_count):
     idx = int(idx)
-    server = smtplib.SMTP('outbound.cisco.com', 25)
+    server = smtplib.SMTP('', 25)           # TODO: Add server name.
     server.starttls()
     with open("message.eml", "r") as f:
         mail_form = f.read()
-    msg_from = "paquach@cisco.com"
+    msg_from = ""                           # TODO: Add from.
     msg_to = state[idx][EMAIL]
     message = "Hello " + state[idx][NAME] + "! Please come to <room> for your picture!"
-    msg_subject = "CAAN Photo Booth"
+    msg_subject = ""                        # TODO: Add subject line
     try:
         print ("Emailing %s" %(state[idx][NAME]))
         print (state[idx][EMAIL])
         text_count[idx]+=1
-        #message = "Hello " + state[idx][NAME] + "! Please get in line."
-        server.sendmail(msg_from, msg_to, mail_form.format(msg_from, msg_to, msg_subject, message))
+        server.sendmail(msg_from, msg_to, mail_form.format(msg_to, msg_from, msg_subject, message))
     except Exception as e:
         print ("Invalid Index or email didn't go through?")
         print(e)
